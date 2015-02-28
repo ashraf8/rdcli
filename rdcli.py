@@ -268,6 +268,8 @@ def main():
 
         for link in links:
             link = link.strip()
+            if link == "":
+                print "";
             if link[0] == "#":
                 debug(link);
                 continue;
