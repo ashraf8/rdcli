@@ -16,6 +16,11 @@ from RDWorker import RDWorker, UnrestrictionError
 from urllib2 import HTTPCookieProcessor, build_opener
 import time,subprocess,os
 import sys
+from cookielib import MozillaCookieJar
+
+base = path.join(path.expanduser('~'), '.config', 'rdcli-py')
+conf_file = path.join(base, 'conf.json')
+cookie_file = path.join(base, 'cookie.txt')
 
 def usage(status=0):
     """
@@ -36,6 +41,7 @@ def usage(status=0):
     print '  -q\tQuiet mode. No output will be generated.'
     print '  -t\tTest mode. Perform all operations EXCEPT file downloading.'
     print '  -x\t nottification time'
+    print '  -L\t List Information'
     # print '  -T\tTimeout. The maximum number of seconds to wait for a download to start.'
 
     print '\n`LINK` can be the URL to a file you want to download (i.e. http://host.com/myFile.zip) or the path to a ' \
@@ -73,6 +79,25 @@ def save_credentials(conf_file, username, password_hash):
         exit('Unable to save login information: %s' % str(e))
 
 
+def getOpener(cookies):
+    opener = build_opener(HTTPCookieProcessor(cookies))
+    headers = [
+                            ("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"),
+                            ("User-Agent", "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36")
+                        ];
+    opener.addheaders = headers;
+    return opener;
+
+def getAccountInfo():
+    print "getting account information"
+    cookies = MozillaCookieJar(cookie_file)
+
+    opener = getOpener(cookies);
+    o = opener.open("https://real-debrid.com/api/account.php");
+
+    print o.read(1024);
+    o.close();
+     
 def download(filepath,url):
     # savedir = filename = ""
 
@@ -89,7 +114,7 @@ def download(filepath,url):
     temp_filepath = filepath + ".temp"
 
     status_string = ('  {:.3f} MB [{:.2%}] received. Rate: [{:4.0f} '
-                     'KB/s].  ETA: [{:.0f} secs]')
+                     'KB/s].  ETA: [{:.0f} min {:.0f} secs]')
 
     opener = build_opener()
     headers = [
@@ -134,7 +159,7 @@ def download(filepath,url):
             bytesdone += len(chunk)
             rate = ((bytesdone - offset) / 1024) / elapsed
             eta = (total - bytesdone) / (rate * 1024)
-            progress_stats = (bytesdone/1024.0/1024.0, bytesdone * 1.0 / total, rate, eta)
+            progress_stats = (bytesdone/1024.0/1024.0, bytesdone * 1.0 / total, rate, eta/60,eta%60)
 
             if not chunk:
                 outfh.close()
@@ -153,7 +178,8 @@ def download(filepath,url):
     print(final_status);
     print("Download finished");
 
-    if _active:
+    #if _active:
+    if bytesdone == total:
         os.rename(temp_filepath, filepath)
         return filepath
     else:  # download incomplete, return temp filepath
@@ -164,10 +190,6 @@ def main():
     """
     Main program
     """
-
-    base = path.join(path.expanduser('~'), '.config', 'rdcli-py')
-    conf_file = path.join(base, 'conf.json')
-    cookie_file = path.join(base, 'cookie.txt')
 
     list_only = False
     test = False
@@ -189,7 +211,7 @@ def main():
 
     # parse command-line arguments
     try:
-        opts, args = gnu_getopt(argv[1:], 'hiqtlpx:o:T:O:')
+        opts, args = gnu_getopt(argv[1:], 'hiqtlpxL:o:T:O:')
     except GetoptError as e:
         print str(e)
         usage(1)
@@ -221,6 +243,8 @@ def main():
             filename = argument
         elif option == '-x':
             n_time = int(argument)
+        elif option == '-L':
+            getAccountInfo();
 
     # stop now if no download and no output wanted
     if test and not verbose:
@@ -272,6 +296,7 @@ def main():
                 print "";
             if link[0] == "#":
                 debug(link);
+                print "\n";
                 continue;
 
             debug('\nUnrestricting %s' % link)
@@ -319,10 +344,7 @@ def main():
                     else:
                         start = 'Downloading: %s (unknown size)\n' % fullpath
 
-                    debug(start)
-                    os.popen("echo '" + start  + "' | netcat 127.0.0.1 5566");
-
-                    
+                    debug(start)                    
                     download(fullpath,unrestricted);
                    
 
