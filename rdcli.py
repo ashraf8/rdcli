@@ -170,7 +170,7 @@ def download(filepath,url):
     except KeyboardInterrupt:
             print "\r\nCaught Keyboard Interrupt... Stopping\r\n";
 
-    final_status = '\r\n%.2fMB [%.3f%%] downloaded in %s (≈ %.2f MB/s)' \
+    final_status = '\r\n%.2fMB [%.3f%%] downloaded in %s (= %.2f MB/s)' \
                                            % (bytesdone/1024.0/1024.0, (bytesdone * 100. / total),
                                               str(datetime.now() - start).split('.')[0], rate/1024.0)
     
@@ -180,11 +180,19 @@ def download(filepath,url):
     #if _active:
     if bytesdone == total:
         os.rename(temp_filepath, filepath)
-        return filepath
+        return (filepath,final_status)
     else:  # download incomplete, return temp filepath
         outfh.close()
-        return temp_filepath
+        return (temp_filepath,final_status)
 
+gcmNotify = False;
+
+def sendNotification(title,body):
+    global gcmNotify
+    if(gcmNotify):
+        os.popen("myNotify.sh " + "'%s' '%s'" % (title,body) );
+    
+    
 def main():
     """
     Main program
@@ -245,6 +253,8 @@ def main():
         elif option == '-L':
             getAccountInfo();
         elif option == '-X':
+            global gcmNotify 
+            gcmNotify = True;
             n_time = -100;
 
     # stop now if no download and no output wanted
@@ -308,6 +318,7 @@ def main():
                 debug(u'==> ' + unrestricted + '\n')
             except UnrestrictionError as e:
                 debug('==> WARNING, unrestriction failed (%s)' % str(e) + '\n')
+                sendNotification("WARNING, unrestriction failed", str(e));
                 continue;
 
             if list_only:
@@ -347,9 +358,9 @@ def main():
                         start = 'Downloading: %s (unknown size)\n' % fullpath
 
                     debug(start)                    
-                    download(fullpath,unrestricted);
+                    res = download(fullpath,unrestricted);
                     if (n_time == -100):
-                     os.popen("myNotify.sh " + "'Download Finished' " + "'Donloading file finished'");
+                        sendNotification( "Downloaded " + original_filename,res[1]);
                    
 #                    os.popen("echo 'Done downloading' | netcat 127.0.0.1 5566");
                     debug("End Time: " + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n');
