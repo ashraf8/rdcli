@@ -42,15 +42,14 @@ def usage(status=0):
     print '  -t\tTest mode. Perform all operations EXCEPT file downloading.'
     print '  -x\t nottification time'
     print '  -L\t List Information'
+    print '  -x\t nottification time.'
+    print '  -X\t Google Gcm Notification.'
     # print '  -T\tTimeout. The maximum number of seconds to wait for a download to start.'
-
     print '\n`LINK` can be the URL to a file you want to download (i.e. http://host.com/myFile.zip) or the path to a ' \
           'file containing one ore several URL(s).'
-
     print '\nExample: rdcli http://host.com/myFile.zip'
     print 'Example: rdcli urls.txt'
     print 'Example: rdcli -t links-to-test.txt'
-
     print '\nReport rdcli bugs to https://github.com/MrMitch/realdebrid-CLI/issues/new'
 
     exit(status)
@@ -211,7 +210,7 @@ def main():
 
     # parse command-line arguments
     try:
-        opts, args = gnu_getopt(argv[1:], 'hiqtlpxL:o:T:O:')
+        opts, args = gnu_getopt(argv[1:], 'hiqtlpXxL:o:T:O:')
     except GetoptError as e:
         print str(e)
         usage(1)
@@ -245,6 +244,8 @@ def main():
             n_time = int(argument)
         elif option == '-L':
             getAccountInfo();
+        elif option == '-X':
+            n_time = -100;
 
     # stop now if no download and no output wanted
     if test and not verbose:
@@ -292,8 +293,9 @@ def main():
 
         for link in links:
             link = link.strip()
-            if link == "":
+            if link.strip() == "":
                 print "";
+                continue;
             if link[0] == "#":
                 debug(link);
                 print "\n";
@@ -346,9 +348,10 @@ def main():
 
                     debug(start)                    
                     download(fullpath,unrestricted);
+                    if (n_time == -100):
+                     os.popen("myNotify.sh " + "'Download Finished' " + "'Donloading file finished'");
                    
-
-                    os.popen("echo 'Done downloading' | netcat 127.0.0.1 5566");
+#                    os.popen("echo 'Done downloading' | netcat 127.0.0.1 5566");
                     debug("End Time: " + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n');
                 except BaseException as e:
                     debug('\nDownload failed: %s\n' % e);
