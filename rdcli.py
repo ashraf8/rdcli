@@ -333,6 +333,10 @@ def main():
                 else:
                     fullpath = path.join(output_dir, original_filename)
 
+                if os.path.isfile(fullpath):
+                    print "File Exists [%s]" % original_filename;
+                    continue;
+
                 try:
                     to_mb = lambda b: b / 1048576.
                     to_kb = lambda b: b / 1024.
